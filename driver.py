@@ -7,15 +7,15 @@ from data_loader import data_loader
 from data_cleanser import DataClenser
 from feature_builder import FeatureBuilder
 from model_poser import ModelPoser
-from visualizers import explore_viz, explain_viz
+from visualizers import explore_viz_np, explore_viz_pd, explain_viz
 
 
-if __name__ == "__main__":
-
+def process_command_line():
     # use command line to prevent unnecessary computations
     if len(sys.argv) > 1:
         command_args = set(sys.argv[1:])
-        run_test = 'predict' in command_args
+        run_cached_df = 'have_df' in command_args
+        run_test = 'run_test' in command_args
         run_cached_predictions = 'have_preds' in command_args
         run_plotting = 'plot' in command_args
     else:
@@ -23,13 +23,41 @@ if __name__ == "__main__":
         run_cached_predictions = False
         run_plotting = False
 
-    if not run_cached_predictions: # (command line arg)
+    return run_cached_df, run_test, run_cached_predictions, run_plotting
 
-        # load dataframes
-        # optionally load random subset of data to reduce runtime while testing
-        df_train = data_loader('data/Train.csv', proportion=0.01)
-        if run_test:
-            df_test = data_loader('data/Test.csv', proportion=1)
+
+if __name__ == "__main__":
+
+    run_cached_df, run_test, run_cached_predictions, run_plotting = process_command_line()
+
+    '''
+    Command line args explanation
+
+    run_cached_df:
+                    DataFrames are saved to a cache once loaded.
+                    Include "have_df" to speed up data loading.
+
+    run_test:
+                    Running your test more than once is heresy.
+                    Include "run_test" to execute your model on your test set.
+
+    run_cached_predictions:
+                    Once you have created a model and ran tests you don't need
+                        to do so again (and you shouldn't).
+                    Include "have_preds" to implement changes to your
+                        explanatory visualization without rerunning the test or
+                        rebuilding the model.
+
+    run_plotting:
+                    Plots get annoying, but commenting out plt.show() is tacky.
+                    Include "run_plotting" to run visualizations
+    '''
+
+
+    if run_cached_predictions == False:  # (command line arg)
+
+        #Load dataframes. Proportion is the porportion of your data to load.
+        df_train, df_test = data_loader(run_cached_df, proportion=0.01)
 
         #build and store cleaning process
         d_cleaner = DataClenser(df_train)
@@ -65,39 +93,25 @@ if __name__ == "__main__":
             #save results to cache
             ys = np.concatenate([y_test.reshape(-1,1), y_pred.reshape(-1,1)],
                 axis = 1)
-            np.savetxt('data/y_cache.txt', ys)
-            np.savetxt('data/x_cache.txt', X_test)
-            np.savetxt('data/model_coeff.txt', model_coeff)
-            np.savetxt('data/feature_names.txt', names)
-            # with open('data/model_cache.pkl', 'wb') as pkl_file1:
-            #     pickle.dump(model, pkl_file1)
-            # with open('data/names.pkl', 'wb') as pkl_file2:
-            #     pickle.dump(names, pkl_file2)
+            with open('cache/y.npy','wb') as f: np.save(f,ys)
+            with open('cache/x.npy','wb') as f: np.save(f,X_test)
+            with open('cache/model.pkl','wb') as f: pickle.dump(model, f)
+            with open('cache/names.pkl','wb') as f: pickle.dump(names, f)
 
     else: # run_cached_predictions == True  (command line arg)
-        #load predictions from cache
-        ys = np.loadtxt('data/y_cache.txt')
+        #load from cache
+
+        ys = np.load('cache/y.npy')
         y_test, y_pred = ys[:,0], ys[:,1]
-        X_test = np.loadtxt('data/x_cache.txt')
-        model_coeff=np.loadtxt('data/model_coeff.txt')
-        names=np.loadtxt('data/feature_names.txt')
-        # pkl_file1 = open('data/model_cache.pkl', 'rb')
-        # model = pickle.load(pkl_file1)
-        # pkl_file1.close()
-        # pkl_file2 = open('data/names.pkl', 'rb')
-        # names = pickle.load(pkl_file2)
-        # pkl_file2.close()
+        X_test = np.load('cache/x.npy')
+        with open('cache/model.pkl','rb') as f: model = pickle.load(f)
+        with open('cache/names.pkl','rb') as f: names = pickle.load(f)
 
-        #produce results visualizations
-        explain_viz(X_test, y_test, y_pred, model, names)
+        print(model.score(X_test, y_test))
 
-
-
-
-
-
-
-
+        if run_plotting: # (comman line arg)
+            #produce results visualizations
+            explain_viz(X_test, y_test, y_pred, model, names)
 
 
 
