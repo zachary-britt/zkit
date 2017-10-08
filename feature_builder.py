@@ -17,6 +17,5 @@ class FeatureBuilder:
         '''
 
         names = df.columns.values
-        y = df.pop('SalePrice').values
         X = df.values
-        return X, y, names
+        return X, names

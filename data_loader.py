@@ -10,26 +10,28 @@ def data_loader(run_cached_df = False, proportion=1.0):
         df_test = pd.read_pickle('cache/df_test.pkl')
 
     else:
-        if proportion != 1.0: #skip rows to reduce df size
+        if proportion < 1.0: #skip rows to reduce df size
             # nth row to keep
             n = int(1.0 / proportion)
             # length of dataset
-            row_count = sum(1 for row in open(filename))
+            row_count = sum(1 for row in open('data/train.csv'))
             # Row indices to skip
-            skipped = [x for x in range(1, num_lines) if x % n != 0]
+            skipped = [x for x in range(1, row_count) if x % n != 0]
         else:
             skipped = None
 
         #read from csv
         nulls = 'None or Unspecified'
         df_train = pd.read_csv('data/train.csv', skiprows=skipped, na_values = nulls )
-        df_test = pd.read_csv('data/test.csv', skiprows=skipped, na_values = nulls)
+        df_test = pd.read_csv('data/test.csv', skiprows=skipped[::10], na_values = nulls)
 
-        #convert date times
-        date_time_cols = ['saledate']
-        for col in date_time_cols:
-            df_train[col] = pd.DatetimeIndex(df_train[col])
-            df_test[col] = pd.DatetimeIndex(df_test[col])
+        #convert saledate to sale_year
+        # (takes forever, so do it here to cache result)
+        df_train['SaleYear'] = pd.DatetimeIndex(df_train['saledate']).year
+        df_test['SaleYear'] = pd.DatetimeIndex(df_test['saledate']).year
+
+        df_train = df_train.drop('saledate', axis=1)
+        df_test = df_test.drop('saledate', axis=1)
 
         #cache dataframes
         df_train.to_pickle('cache/df_train.pkl')

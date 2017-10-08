@@ -5,7 +5,14 @@ import matplotlib.pyplot as plt
 
 
 def explore_viz_pd(df):
-    pass
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    year_prices = df.groupby(['SaleYear']).mean()
+
+    ax.scatter( df['SaleYear'], df['SalePrice'] )
+    plt.show()
+
 
 def explore_viz_np(X, y, names):
 
