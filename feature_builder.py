@@ -15,8 +15,8 @@ class FeatureBuilder:
                 y numpy array,
                 array of feature names
         '''
-        
+
         names = df.columns.values
-        y = df.pop(df.columns[0]).values
+        y = df.pop('SalePrice').values
         X = df.values
         return X, y, names

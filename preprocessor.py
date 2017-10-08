@@ -3,6 +3,8 @@ import numpy as np
 from numpy import intersect1d as inter
 from numpy import setdiff1d as diff
 import pdb
+import datetime
+
 
 class Regularizer:
     def __init__(self, series):
@@ -42,8 +44,18 @@ class OneHotEncoder:
         df = df.drop(self.col_name,axis=1)
         return df
 
-class DataClenser:
+
+
+
+
+class Preprocessor:
     def __init__(self, df):
+
+        self.other_drops = ['fiModelDesc', 'fiBaseModel', 'fiSecondaryDesc', 'state',
+            'MachineID', 'fiModelSeries','fiModelDescriptor','ProductGroupDesc',
+            'SalesID','fiProductClassDesc','ModelID','datasource','auctioneerID']
+
+
         # remember nan status of training cols:
         self.all_cols = df.columns.values
         self.has_nulls = df.columns[df.isnull().any()].values
@@ -58,7 +70,7 @@ class DataClenser:
         # (dictionary of col_name: Regularizer objects)
         self.regularizers = {col: Regularizer(df[col]) for col in self.numeric_cols}
 
-        self.encoders = {col: OneHotEncoder(df,col,5) for col in self.object_cols}
+        self.encoders = {col: OneHotEncoder(df,col,6) for col in self.object_cols}
 
     def purge_useless_cols_(self, df):
         to_drop = inter(df.columns.values, self.all_nulls)
@@ -68,6 +80,11 @@ class DataClenser:
     def purge_every_null_(self, df):
         to_drop = inter(df.columns.values, self.any_nulls)
         df = df.drop(to_drop, axis=1)
+        return df
+
+    def add_age_col(self, df, sale_date_col, year_made_col):
+        df['sale_year'] = df[sale_date_col].year
+        df['Age'] = df['sale_year'] - df[year_made_col]
         return df
 
     def coerce_numerics_(self, df):
@@ -87,6 +104,8 @@ class DataClenser:
         return df
 
     def __call__(self, df):
+        df = df.drop(self.other_drops, axis=1)
+        df = self.add_age_col(df, 'saledate', 'YearMade')
         df = self.coerce_numerics_(df)
         df = self.execute_regularization_(df)
         df = self.execute_encoding_(df)

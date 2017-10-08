@@ -4,7 +4,7 @@ import sys
 import pickle
 
 from data_loader import data_loader
-from data_cleanser import DataClenser
+from preprocessor import Preprocessor
 from feature_builder import FeatureBuilder
 from model_poser import ModelPoser
 from visualizers import explore_viz_np, explore_viz_pd, explain_viz
@@ -32,22 +32,18 @@ if __name__ == "__main__":
 
     '''
     Command line args explanation
-
     run_cached_df:
                     DataFrames are saved to a cache once loaded.
                     Include "have_df" to speed up data loading.
-
     run_test:
                     Running your test more than once is heresy.
                     Include "run_test" to execute your model on your test set.
-
     run_cached_predictions:
                     Once you have created a model and ran tests you don't need
                         to do so again (and you shouldn't).
                     Include "have_preds" to implement changes to your
                         explanatory visualization without rerunning the test or
                         rebuilding the model.
-
     run_plotting:
                     Plots get annoying, but commenting out plt.show() is tacky.
                     Include "run_plotting" to run visualizations
@@ -60,11 +56,11 @@ if __name__ == "__main__":
         df_train, df_test = data_loader(run_cached_df, proportion=0.01)
 
         #build and store cleaning process
-        d_cleaner = DataClenser(df_train)
+        preprocessor = Preprocessor(df_train)
 
         #execute cleaning process
-        df_train = d_cleaner.clean(df_train)
-        df_test = d_cleaner.clean(df_test)
+        df_train = preprocessor(df_train)
+        df_test = preprocessor(df_test)
 
         #build and store feature engineering process
         f_builder = FeatureBuilder(df_train)
