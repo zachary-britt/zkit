@@ -23,7 +23,7 @@ def data_loader(run_cached_df = False, proportion=1.0):
         #read from csv
         nulls = 'None or Unspecified'
         df_train = pd.read_csv('data/train.csv', skiprows=skipped, na_values = nulls )
-        df_test = pd.read_csv('data/test.csv', skiprows=skipped[::10], na_values = nulls)
+        df_test = pd.read_csv('data/test.csv', skiprows=skipped, na_values = nulls)
 
         #convert saledate to sale_year
         # (takes forever, so do it here to cache result)

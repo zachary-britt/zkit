@@ -59,7 +59,7 @@ if __name__ == "__main__":
     if run_cached_predictions == False:  # (command line arg)
 
         #Load dataframes. Proportion is the porportion of your data to load.
-        df_train, df_test = data_loader(run_cached_df, proportion=0.05)
+        df_train, df_test = data_loader(run_cached_df, proportion=1)
 
         #pdb.set_trace()
 
