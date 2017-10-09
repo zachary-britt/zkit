@@ -1,6 +1,6 @@
 import pandas as pd
 import pickle
-
+import pdb
 
 def data_loader(run_cached_df = False, proportion=1.0):
 
@@ -27,11 +27,17 @@ def data_loader(run_cached_df = False, proportion=1.0):
 
         #convert saledate to sale_year
         # (takes forever, so do it here to cache result)
-        df_train['SaleYear'] = pd.DatetimeIndex(df_train['saledate']).year
-        df_test['SaleYear'] = pd.DatetimeIndex(df_test['saledate']).year
+        df_train['SaleDate'] = pd.DatetimeIndex(df_train['saledate'])
+        df_test['SaleDate'] = pd.DatetimeIndex(df_test['saledate'])
 
-        df_train = df_train.drop('saledate', axis=1)
-        df_test = df_test.drop('saledate', axis=1)
+        # pdb.set_trace()
+
+        df_train['SaleYear'] = df_train['SaleDate'].apply(lambda x: x.year)
+        df_test['SaleYear'] = df_test['SaleDate'].apply(lambda x: x.year)
+
+
+        # df_train = df_train.drop('saledate', axis=1)
+        # df_test = df_test.drop('saledate', axis=1)
 
         #cache dataframes
         df_train.to_pickle('cache/df_train.pkl')
