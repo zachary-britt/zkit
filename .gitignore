@@ -1,3 +1,7 @@
-data/
-cache/
-__pycache__/
+regression_study/data/
+regression_study/cache/
+regression_study/__pycache__/
+
+churn_study/data/
+churn_study/cache/
+churn_study/__pycache__/
