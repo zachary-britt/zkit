@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import sys
 import pickle
-import pdb
+import ipdb
 
 from data_loader import data_loader
 from preprocessor import Preprocessor, make_immediate_drops, add_age_col, PriceScale
@@ -63,9 +63,9 @@ if __name__ == "__main__":
     if run_cached_predictions == False:  # (command line arg)
         if have_interp == False:
             #Load dataframes. Proportion is the porportion of your data to load.
-            df_train, df_test = data_loader(run_cached_df, proportion=1)
+            df_train, df_test = data_loader(run_cached_df, proportion=0.05)
 
-            #pdb.set_trace()
+            #ipdb.set_trace()
 
             #early cleanup:
             df_train = make_immediate_drops(df_train)
@@ -76,6 +76,8 @@ if __name__ == "__main__":
             df_test = add_age_col(df_test)
 
             price_scaler = PriceScale(df_train)
+
+            #ipdb.set_trace()
 
             df_train=price_scaler(df_train)
             df_test=price_scaler(df_test)
@@ -102,7 +104,7 @@ if __name__ == "__main__":
         df_train = preprocessor(df_train)
         df_test = preprocessor(df_test)
 
-
+        
 
 
         #build and store feature engineering process

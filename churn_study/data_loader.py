@@ -1,6 +1,6 @@
 import pandas as pd
 import pickle
-import pdb
+import ipdb
 
 def data_loader(run_cached_df = False, proportion=1.0):
 
@@ -29,15 +29,15 @@ def data_loader(run_cached_df = False, proportion=1.0):
         # (takes forever, so do it here to cache result)
         df_train['SaleDate'] = pd.DatetimeIndex(df_train['saledate'])
         df_test['SaleDate'] = pd.DatetimeIndex(df_test['saledate'])
-
-        # pdb.set_trace()
+        df_train = df_train.drop('saledate', axis=1)
+        df_test = df_test.drop('saledate', axis=1)
+        # ipdb.set_trace()
 
         df_train['SaleYear'] = df_train['SaleDate'].apply(lambda x: x.year)
         df_test['SaleYear'] = df_test['SaleDate'].apply(lambda x: x.year)
 
 
-        # df_train = df_train.drop('saledate', axis=1)
-        # df_test = df_test.drop('saledate', axis=1)
+
 
         #cache dataframes
         df_train.to_pickle('cache/df_train.pkl')

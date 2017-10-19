@@ -3,7 +3,8 @@ import numpy as np
 from numpy import intersect1d as inter
 from numpy import setdiff1d as diff
 from numpy import union1d as union
-import pdb
+from functools import reduce
+import ipdb
 import datetime
 from sklearn.linear_model import Ridge
 
@@ -24,6 +25,8 @@ class Regularizer:
 class OneHotEncoder:
     def __init__(self, df, col_name, max_cats=5):
         self.col_name = col_name
+        if not self.col_name in df.columns:
+            return df
         # record dominant categories
         all_cats = df[col_name].value_counts().index.values
         n = len(all_cats)
@@ -38,7 +41,11 @@ class OneHotEncoder:
 
     def __call__(self, df):
         # execute encoding for each category in self.cats
-        #pdb.set_trace()
+        #ipdb.set_trace()
+
+        if not self.col_name in df.columns:
+            return df
+
         for i,cat in enumerate(self.cats):
             new_col = self.new_col_names[i]
 
@@ -88,31 +95,33 @@ class PriceScale:
             interp = Ridge(alpha = 1, fit_intercept=True, normalize=True)
             X=X.values.reshape(-1,1)
             y=y.values.reshape(-1,1)
-            XS = np.concatenate([X, X**2, X**3, X**4],axis=1)
+            #XS = np.concatenate([X, X**2, X**3, X**4],axis=1)
+            XS = np.exp(-X)
             interp.fit(XS,y)
             self.MIDinterpolators[MID] = interp
 
         self.group_means = df.groupby('ProductGroup').mean().MarketScaledPrice
 
     def __call__(self, df):
+        #ipdb.set_trace()
         df['InterpIntercept'] = 0
         for MID in self.MIDinterpolators:
             if MID in df.ModelID.values:
                 interp = self.MIDinterpolators[MID]
                 inds = df[df.ModelID==MID].index
-                X = df.loc[inds]['YearsFrom2012'].values.reshape(-1,1)
-                Xs = np.concatenate([X, X**2, X**3, X**4],axis=1)
-                df.loc[inds]['InterpIntercept'] += interp.predict(Xs).flatten()
+                X = df.loc[inds,'YearsFrom2012'].values.reshape(-1,1)
+                #Xs = np.concatenate([X, X**2, X**3, X**4],axis=1)
+                XS = np.exp(-X)
+                df.loc[inds,'InterpIntercept'] += interp.predict(Xs).flatten()
 
         zdf = df[df['InterpIntercept']==0]
         for cat in self.group_means.index.values:
             inds = zdf[zdf.ProductGroup==cat].index
-            df.loc[inds]['InterpIntercept'] += self.group_means.loc[cat]
-        pdb.set_trace()
+            df.loc[inds,'InterpIntercept'] += self.group_means.loc[cat]
+        #ipdb.set_trace()
         for years in self.year_market_strength.index.values:
             inds = df[df.YearsFrom2012==years].index
-            df.loc[inds]['InterpIntercept'] /= self.year_market_strength.loc[years]
-
+            df.loc[inds,'InterpIntercept'] /= self.year_market_strength.loc[years]
         return df
 
 class Preprocessor:
@@ -122,15 +131,16 @@ class Preprocessor:
         # self.has_nulls = df.columns[df.isnull().any()].values
         # self.all_nulls = df.columns[df.isnull().all()].values
 
-        self.target_col = np.array(['SalePrice'])
-        self.other_col  = np.array(['SalesID','SaleDate', 'ModelID', 'MachineID', 'InterpIntercept'])
+        self.target_cols = np.array(['SalePrice', 'MarketScaledPrice'])
+        self.index_cols  = np.array(['SalesID','ModelID','MachineID','ProductGroup',
+                'SaleDate','SaleYear', 'YearMade','YearsFrom2012'])
+        self.intercept_col = np.array(['InterpIntercept'])
         self.feature_cols = diff( df.columns.values,
-                                    union(self.target_col, self.other_col))
-
+                                    reduce(union,(self.target_cols, self.index_cols, self.intercept_col)))
+        #ipdb.set_trace()
         # organize features into categorical, numeric and other:
-        force_categorical = np.array(['ModelID'])
         object_cols = inter ( df.columns[df.dtypes == np.object].values, self.feature_cols )
-        self.object_cols = np.concatenate([object_cols, force_categorical], axis=0)
+        self.object_cols = np.array(object_cols)
         self.numeric_cols = diff(self.feature_cols, self.object_cols)
 
 
@@ -143,7 +153,7 @@ class Preprocessor:
             # if col == "ModelID":
             #     self.encoders[col] = OneHotEncoder(df,col,500)
             # else:
-            self.encoders[col] = OneHotEncoder(df,col,6)
+            self.encoders[col] = OneHotEncoder(df,col,2)
 
 
 
@@ -174,7 +184,7 @@ class Preprocessor:
         return df
 
     def __call__(self, df):
-        #pdb.set_trace()
+        #ipdb.set_trace()
         df = self.coerce_numerics_(df)
         df = self.execute_regularization_(df)
         # df = self.execute_encoding_(df)

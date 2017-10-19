@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.linear_model import Lasso, ElasticNet
 from sklearn.model_selection import cross_val_score, GridSearchCV
-import pdb
+import ipdb
 
 class ModelPoser:
     def __init__(self, X, y):
@@ -33,7 +33,7 @@ class ModelPoser:
         self.params = grid_search.best_params_
         self.score = grid_search.best_score_
         self.best = grid_search.best_estimator_
-        #pdb.set_trace()
+        #ipdb.set_trace()
         return
 
     def predict(self, X):
