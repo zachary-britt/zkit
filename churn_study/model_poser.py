@@ -1,26 +1,23 @@
 import numpy as np
-from sklearn.linear_model import Lasso, ElasticNet
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression as LR
+from sklearn.ensemble import RandomForestClassifier as RF
+from sklearn.ensemble import GradientBoostingClassifier as GBC
+from sklearn.svm import SVC
+
+
+
 from sklearn.model_selection import cross_val_score, GridSearchCV
 import ipdb
 
 class ModelPoser:
     def __init__(self, X, y):
 
-        '''
-        'mean_test_score':
-        array([
-        0.62718964,     lasso alpha = 1
-        0.62170231,     4
-        0.59540675,     16
-        0.56490968,     64
-        0.52374966]),   256
+        model_list = [RF, LR, GBC, SVC(probability=True)]
 
 
-        0.63816927,     net alpha = 0.5, ratio = 0.999
-        0.62711329,     0.5, 0.999
-        '''
         #param_space = {'alpha': np.logspace(-1,2,4, base=2)}
-        param_space = {'alpha': [0.5]}
+
         # lasso = Lasso(max_iter=10000, tol=0.001)
         # grid_search = GridSearchCV(lasso, param_space, cv=4, n_jobs=-1)
 

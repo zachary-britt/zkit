@@ -3,11 +3,8 @@ import numpy as np
 from numpy import intersect1d as inter
 from numpy import setdiff1d as diff
 from numpy import union1d as union
-from functools import reduce
 import ipdb
 import datetime
-from sklearn.linear_model import Ridge
-
 
 
 class Regularizer:
@@ -61,114 +58,48 @@ class OneHotEncoder:
 
 
 def make_immediate_drops(df):
-    drops = ['fiModelDesc', 'fiBaseModel', 'fiSecondaryDesc', 'state',
-        'fiModelSeries','fiModelDescriptor','ProductGroupDesc',
-        'fiProductClassDesc','datasource','auctioneerID']
-    df = df.drop(drops, axis=1)
+    # TODO Setup instant drops
+    pass
+    # drops = ['fiModelDesc', 'fiBaseModel', 'fiSecondaryDesc', 'state',
+    #     'fiModelSeries','fiModelDescriptor','ProductGroupDesc',
+    #     'fiProductClassDesc','datasource','auctioneerID']
+    # df = df.drop(drops, axis=1)
     return df
 
-
-def add_age_col(df):
-    # nanify nonsense
-    df.YearMade = df.YearMade.where(df.YearMade >= 1800, np.nan)
-
-    df['Age'] = df['SaleYear'] - df['YearMade']
-    df['YearsFrom2012'] = df['SaleYear'] - 2012
-    return df
-
-class PriceScale:
-    def __init__(self, df):
-        self.mean = df.SalePrice.mean()
-        self.year_market_strength = df.groupby('SaleYear').mean().SalePrice / self.mean
-        self.year_market_strength.loc[2012] = 2*self.year_market_strength.loc[2011] \
-                                            - 1*self.year_market_strength.loc[2010]
-
-        df['MarketScaledPrice'] = df['SalePrice'].values.reshape(-1,1) /   \
-                                self.year_market_strength.loc[df['SaleYear']].values.reshape(-1,1)
-
-        #self.model_means = df.groupby('ModelId').mean().SalePrice
-        self.MIDinterpolators = {}
-        for MID in df.ModelID.unique():
-            mdf = df[df.ModelID == MID]
-            X = mdf.YearsFrom2012
-            y = mdf.MarketScaledPrice
-            interp = Ridge(alpha = 1, fit_intercept=True, normalize=True)
-            X=X.values.reshape(-1,1)
-            y=y.values.reshape(-1,1)
-            #XS = np.concatenate([X, X**2, X**3, X**4],axis=1)
-            XS = np.exp(-X)
-            interp.fit(XS,y)
-            self.MIDinterpolators[MID] = interp
-
-        self.group_means = df.groupby('ProductGroup').mean().MarketScaledPrice
-
-    def __call__(self, df):
-        #ipdb.set_trace()
-        df['InterpIntercept'] = 0
-        for MID in self.MIDinterpolators:
-            if MID in df.ModelID.values:
-                interp = self.MIDinterpolators[MID]
-                inds = df[df.ModelID==MID].index
-                X = df.loc[inds,'YearsFrom2012'].values.reshape(-1,1)
-                #Xs = np.concatenate([X, X**2, X**3, X**4],axis=1)
-                XS = np.exp(-X)
-                df.loc[inds,'InterpIntercept'] += interp.predict(Xs).flatten()
-
-        zdf = df[df['InterpIntercept']==0]
-        for cat in self.group_means.index.values:
-            inds = zdf[zdf.ProductGroup==cat].index
-            df.loc[inds,'InterpIntercept'] += self.group_means.loc[cat]
-        #ipdb.set_trace()
-        for years in self.year_market_strength.index.values:
-            inds = df[df.YearsFrom2012==years].index
-            df.loc[inds,'InterpIntercept'] /= self.year_market_strength.loc[years]
-        return df
 
 class Preprocessor:
     def __init__(self, df):
 
-        # remember nan status of training cols:
-        # self.has_nulls = df.columns[df.isnull().any()].values
-        # self.all_nulls = df.columns[df.isnull().all()].values
 
-        self.target_cols = np.array(['SalePrice', 'MarketScaledPrice'])
+        self.target_cols = np.array(['churn'])
+
         self.index_cols  = np.array(['SalesID','ModelID','MachineID','ProductGroup',
-                'SaleDate','SaleYear', 'YearMade','YearsFrom2012'])
-        self.intercept_col = np.array(['InterpIntercept'])
-        self.feature_cols = diff( df.columns.values,
-                                    reduce(union,(self.target_cols, self.index_cols, self.intercept_col)))
-        #ipdb.set_trace()
-        # organize features into categorical, numeric and other:
+               'SaleDate','SaleYear', 'YearMade','YearsFrom2012'])
+        # self.intercept_col = np.array(['InterpIntercept'])
+
+        self.feature_cols = diff(df.columns.values, union(self.target_cols, self.index_cols))
+
+        #force_numeric_cols = np.array([])
+        df = coerce_numerics_(df, force_numeric_cols)
+
+        # organize features into numeric and categorical:
         object_cols = inter ( df.columns[df.dtypes == np.object].values, self.feature_cols )
         self.object_cols = np.array(object_cols)
         self.numeric_cols = diff(self.feature_cols, self.object_cols)
-
 
         # set up regularization process:
         # (dictionary of col_name: Regularizer objects)
         self.regularizers = {col: Regularizer(df[col]) for col in self.numeric_cols}
 
+        # set up encoders
         self.encoders = {}
         for col in self.object_cols:
-            # if col == "ModelID":
-            #     self.encoders[col] = OneHotEncoder(df,col,500)
-            # else:
-            self.encoders[col] = OneHotEncoder(df,col,2)
+            category_numbers=2
+            self.encoders[col] = OneHotEncoder(df,col,category_numbers)
 
 
-
-    def purge_useless_cols_(self, df):
-        to_drop = inter(df.columns.values, self.all_nulls)
-        df = df.drop(to_drop, axis=1)
-        return df
-
-    def purge_every_null_(self, df):
-        to_drop = inter(df.columns.values, self.any_nulls)
-        df = df.drop(to_drop, axis=1)
-        return df
-
-    def coerce_numerics_(self, df):
-        to_num = inter(df.columns.values, self.numeric_cols)
+    def coerce_numerics_(self, df, force_numeric_cols):
+        to_num = inter(df.columns.values, force_numeric_cols)
         for col in to_num:
             df[col] = pd.to_numeric(df[col], errors='coerce')
         return df

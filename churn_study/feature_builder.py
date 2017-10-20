@@ -16,6 +16,6 @@ class FeatureBuilder:
                 array of feature names
         '''
 
-        names = df.columns.values
+        feature_names = df.columns.values
         X = df.values
-        return X, names
+        return X, feature_names
