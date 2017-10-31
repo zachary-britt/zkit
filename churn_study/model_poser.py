@@ -30,7 +30,6 @@ class ModelPoser:
         self.params = grid_search.best_params_
         self.score = grid_search.best_score_
         self.best = grid_search.best_estimator_
-        #ipdb.set_trace()
         return
 
     def predict(self, X):
